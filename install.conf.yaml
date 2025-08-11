@@ -23,6 +23,10 @@
       stdin: true
       stdout: true
       stderr: true
+    - command: ./setup_zsh.sh
+      stdin: true
+      stdout: true
+      stderr: true
     - command: ./setup_uv.sh
       stdin: true
       stdout: true
