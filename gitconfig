@@ -1,0 +1,22 @@
+[user]
+name = Andy Jakubowski
+email = hello@andyjakubowski.com
+signingkey = B1474D723D48075D
+
+[core]
+editor = "code --wait"
+
+[commit]
+gpgsign = true
+[tag]
+gpgsign = true
+[gpg]
+program = /usr/bin/gpg
+[filter "lfs"]
+process = git-lfs filter-process
+required = true
+clean = git-lfs clean -- %f
+smudge = git-lfs smudge -- %f
+[init]
+defaultBranch = main
+

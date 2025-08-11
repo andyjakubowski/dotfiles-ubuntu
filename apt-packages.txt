@@ -1,0 +1,10 @@
+curl
+git
+gnupg
+git-lfs
+pinentry-gnome3
+gh
+
+# Vendor packages
+google-chrome-stable
+code
