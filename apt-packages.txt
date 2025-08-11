@@ -4,6 +4,9 @@ gnupg
 git-lfs
 pinentry-gnome3
 gh
+build-essential
+python3-dev
+nvidia-driver-575-open
 
 # Vendor packages
 google-chrome-stable
