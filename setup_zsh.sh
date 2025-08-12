@@ -6,7 +6,6 @@ chsh -s $(which zsh)
 
 # Hugging Face cache on large SSD
 if [ -d /mnt/data ]; then
-    export HF_HOME=/mnt/data/hf_cache
     sudo mkdir -p "$HF_HOME"
     sudo chown -R "$USER":"$USER" "$HF_HOME"
 else

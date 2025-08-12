@@ -7,6 +7,9 @@ echo 'Hello from .zshrc'
 # --max-old-space-size sets max heap memory in MB (adjust as needed for your machine)
 export NODE_OPTIONS="--max-old-space-size=16384"
 
+# Hugging Face cache on large SSD
+export HF_HOME=/mnt/data/hf_cache
+
 # Customize Prompt(s)
 ORIGINAL_PROMPT_LINE_1='
 '
