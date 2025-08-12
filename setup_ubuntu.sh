@@ -7,4 +7,4 @@ set -eu pipefail
 gsettings set org.gnome.desktop.peripherals.keyboard delay 200
 
 # Increase repeat speed (default is ~25)
-gsettings set org.gnome.desktop.peripherals.keyboard repeat-interval 5
+gsettings set org.gnome.desktop.peripherals.keyboard repeat-interval 20
