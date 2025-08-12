@@ -35,3 +35,7 @@
       stdin: true
       stdout: true
       stderr: true
+    - command: ./cleanup.sh
+      stdin: true
+      stdout: true
+      stderr: true
