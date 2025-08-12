@@ -13,3 +13,4 @@ nvidia-driver-575-open
 # Vendor packages
 google-chrome-stable
 code
+1password
