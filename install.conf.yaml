@@ -7,13 +7,13 @@
 
 - link:
     ~/.profile:
-        path: profile
+      path: profile
     ~/.bashrc:
-        path: bashrc
+      path: bashrc
     ~/.bash_logout:
-        path: bash_logout
+      path: bash_logout
     ~/.zshrc:
-        path: zshrc
+      path: zshrc
     ~/.gitconfig:
       force: true
       path: gitconfig
@@ -31,4 +31,7 @@
       stdin: true
       stdout: true
       stderr: true
-
+    - command: ./setup_ubuntu.sh
+      stdin: true
+      stdout: true
+      stderr: true
