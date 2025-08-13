@@ -71,3 +71,5 @@ alias trail='<<<${(F)path}'
 
 # Output PATH segments on separate lines
 alias path='echo $path | tr " " \\n'
+
+. "$HOME/.local/bin/env"
