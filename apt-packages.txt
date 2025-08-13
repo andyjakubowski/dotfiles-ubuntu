@@ -9,6 +9,8 @@ gh
 build-essential
 python3-dev
 nvidia-driver-575-open
+tree
+tldr
 
 # Vendor packages
 google-chrome-stable
