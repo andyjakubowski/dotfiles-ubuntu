@@ -11,6 +11,7 @@ python3-dev
 nvidia-driver-575-open
 tree
 tldr
+openssh-server
 
 # Vendor packages
 google-chrome-stable
