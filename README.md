@@ -55,6 +55,18 @@ Ubuntu installs software from package repositories: trusted online catalogs that
 
 The scripts in `provision/apt-repos.d/` register those vendor repositories with the system. Each script downloads the vendor's signing key and adds an APT source definition. The signing key lets APT verify that downloaded packages really came from that vendor and were not modified. After registration, applications such as 1Password, Google Chrome, and Visual Studio Code can be installed and updated through the normal APT workflow alongside Ubuntu packages.
 
+## Optional: boot directly to Ubuntu
+
+When GRUB detects another operating system, `30_os-prober` can force the boot menu to appear even when `GRUB_TIMEOUT_STYLE=hidden` and `GRUB_TIMEOUT=0` are set. To skip the menu, set the following in `/etc/default/grub`:
+
+```text
+GRUB_DISABLE_OS_PROBER=true
+GRUB_TIMEOUT_STYLE=hidden
+GRUB_TIMEOUT=0
+```
+
+Then regenerate the configuration with `sudo update-grub`. This removes other detected operating systems from the GRUB menu but does not delete or modify them; they remain accessible from the UEFI boot menu or after re-enabling OS probing and running `sudo update-grub` again.
+
 ## Optional data disk
 
 `setup_data_disk.sh` is not run by the main installer. It prepares a block device, formats it as ext4 when no filesystem exists, mounts it at `/mnt/data`, and adds it to `/etc/fstab`.
