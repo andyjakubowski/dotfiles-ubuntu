@@ -34,6 +34,10 @@ The installer initializes the Dotbot submodule, replaces the managed files in yo
 
 Run `./install` again after changing the dotfiles or package list.
 
+## Guides
+
+- [Low-latency SSH over direct Ethernet](docs/direct-ethernet-ssh.md)
+
 ## Repository layout
 
 | Path | Purpose |
