@@ -4,6 +4,7 @@ curl
 git
 gnupg
 git-lfs
+iw
 pinentry-gnome3
 gh
 build-essential
