@@ -2,10 +2,12 @@ qemu-system-x86
 qemu-utils
 libvirt-daemon-system
 libvirt-clients
-virtinst
+libvirt-daemon-driver-qemu
 cloud-image-utils
 dnsmasq-base
 nftables
+ovmf
+guestfs-tools
 curl
 ca-certificates
 python3

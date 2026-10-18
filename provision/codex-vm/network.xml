@@ -6,7 +6,7 @@
   <dns enable='yes'/>
   <ip address='192.168.250.1' netmask='255.255.255.0'>
     <dhcp>
-      <host mac='52:54:00:ca:de:01' name='codex-vm' ip='192.168.250.2'/>
+      <range start='192.168.250.2' end='192.168.250.254'/>
     </dhcp>
   </ip>
 </network>

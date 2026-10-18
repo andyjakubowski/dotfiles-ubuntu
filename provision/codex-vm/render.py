@@ -36,6 +36,9 @@ def domain(config, name, slot, disk, seed, gpu=True):
     element(root, "on_crash", "destroy")
     devices = element(root, "devices")
     element(devices, "emulator", "/usr/bin/qemu-system-x86_64")
+    # The 5090 exposes a 32 GiB BAR; reserve enough 64-bit MMIO address space.
+    controller = element(devices, "controller", type="pci", index="0", model="pcie-root")
+    element(controller, "pcihole64", "64", unit="GiB")
     for path, kind, fmt, target, bus in [(disk, "disk", "qcow2", "vda", "virtio"),
                                          (seed, "cdrom", "raw", "sda", "sata")]:
         node = element(devices, "disk", type="file", device=kind)

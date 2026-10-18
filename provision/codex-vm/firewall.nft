@@ -16,14 +16,14 @@ table inet codex_vm {
         type filter hook input priority -20; policy accept;
         iifname "virbr-codex" ct state established,related accept
         iifname "virbr-codex" meta nfproto ipv4 udp sport 68 udp dport 67 accept
-        iifname "virbr-codex" ip saddr 192.168.250.2 ip daddr 192.168.250.1 udp dport 53 accept
-        iifname "virbr-codex" ip saddr 192.168.250.2 ip daddr 192.168.250.1 tcp dport 53 accept
+        iifname "virbr-codex" ip saddr 192.168.250.0/24 ip daddr 192.168.250.1 udp dport 53 accept
+        iifname "virbr-codex" ip saddr 192.168.250.0/24 ip daddr 192.168.250.1 tcp dport 53 accept
         iifname "virbr-codex" counter drop
     }
     chain forward {
         type filter hook forward priority -20; policy accept;
         iifname "virbr-codex" meta nfproto ipv6 counter drop
-        iifname "virbr-codex" ip saddr != 192.168.250.2 counter drop
+        iifname "virbr-codex" ip saddr != 192.168.250.0/24 counter drop
         iifname "virbr-codex" ip daddr @nonpublic_v4 counter drop
         oifname "virbr-codex" ct state established,related accept
         oifname "virbr-codex" counter drop

@@ -1,89 +1,107 @@
-# Optional isolated Codex VM
+# Disposable GPU VM: setup and daily use
 
-**Status:** these are the current single-VM scripts, not the planned disposable
-GPU workstation. GPU passthrough, model sharing and disposable clones are not
-implemented. Start with [the architecture and developer workflow](gpu-vm-explained.md)
-to understand the intended setup; this guide documents the existing scripts.
+This guide is the operating procedure; [the architecture guide](gpu-vm-explained.md)
+explains the mechanisms. The implementation is prepared and tested offline, but
+has not yet been installed or verified with a running GPU guest on ai-box.
 
-This setup targets Ubuntu 24.04 x86_64 with working KVM. It follows
-[Ubuntu's libvirt guidance](https://ubuntu.com/server/docs/how-to/virtualisation/libvirt/)
-and uses an official Ubuntu cloud image with cloud-init. OpenAI recognizes a
-[dedicated sandbox VM](https://learn.chatgpt.com/docs/developer-commands) as an
-appropriate environment for bypassing Codex's internal sandbox and approvals;
-it does not provide this particular Ubuntu provisioning implementation.
+## What dotfiles does
 
-## Review before running
+`DOTFILES_CODEX_VM=1 ./setup_codex_vm.sh` prepares the **host infrastructure**.
+It does not create a VM, detach a live GPU, change firmware settings or reboot.
+Ordinary `./install` runs skip this optional setup; setting the same opt-in on
+`./install` includes it in the full dotfiles run.
 
-Ordinary `./install` runs skip VM setup. Enable it explicitly:
+The setup installs Ubuntu QEMU/libvirt, OVMF firmware, cloud-image tools,
+libguestfs tools and their dependencies. It installs a root-owned `codex-vm`
+command, saves configuration under `/etc/codex-vm`, and enables libvirt plus a
+firewall service. It creates a private NAT network/bridge (`virbr-codex`,
+`192.168.250.0/24`) with DHCP/DNS; libvirt manages forwarding and NAT. Existing
+physical NICs and NetworkManager profiles are unchanged. Package installation
+may also activate libvirt's default network.
+
+The dedicated firewall table is replaced atomically; unrelated tables are not
+flushed. New guest connections to host services are blocked except bridge
+DNS/DHCP. Guest forwarding to private/link-local/CGNAT/reserved IPv4 destinations
+and all guest IPv6 forwarding is blocked. Public internet destinations remain
+allowed. Guest bridge ports are isolated from each other. Other host firewall
+rules can further restrict traffic. Keep these services enabled; a host-side
+firewall flush can remove the boundary and needs reconciliation.
+
+No host user gets broad libvirt privileges, and no host sudo policy is changed.
+Management uses explicit host sudo. No physical SSD is partitioned or formatted.
+Guest disks are files on the **system SSD**, not the data SSD. All of the mounted
+`/mnt/data` is intentionally readable in the guest through a **host-enforced
+read-only QEMU 9p export**, not writable host disk passthrough. This also exposes
+any non-model data there; only share files the guest may read. Ubuntu 24.04's
+libvirt lacks native read-only virtiofs support, so 9p is the supported alternative.
+It can be slower than virtiofs for model loading; GPU computation is separate.
+Model files mapped by running workloads should not be modified on the host.
+
+Defaults in `provision/codex-vm/config.sh`: 8 vCPUs, 16384 MiB RAM, 100 GiB guest
+disk, the only detected NVIDIA GPU, `nvidia-driver-575-open` in the guest (Ubuntu
+may transition this package to a newer supported branch). The public keys already
+in `~/.ssh/authorized_keys` authorize the guest. Private keys are never copied.
+Override with `CODEX_VM_CPUS`, `CODEX_VM_MEMORY_MIB`, `CODEX_VM_DISK_GIB`,
+`CODEX_VM_GPU_BDF`, `CODEX_VM_NVIDIA_PACKAGE`, or `CODEX_VM_SSH_PUBLIC_KEY`.
+The latter must name a file of plain public keys, not keys with authorization options.
+Defaults and recipes live in Git; per-machine public keys are read at setup time.
+
+## 1. Prepare the host and reserve the GPU
+
+On ai-box, from the repository:
 
 ```sh
-DOTFILES_CODEX_VM=1 CODEX_VM_SSH_PUBLIC_KEY=/absolute/path/to/client-key.pub ./setup_codex_vm.sh
+DOTFILES_CODEX_VM=1 ./setup_codex_vm.sh
+sudo codex-vm inspect
 ```
 
-Or set the same variables when running `./install` to include the VM in the
-full dotfiles setup. The public key must belong to the client you will connect
-from (for example your Mac). Copy only that public key onto ai-box; its private
-key stays on your client. No key generation, agent forwarding, or credential
-copying is performed. Missing/invalid public keys fail before sudo.
-The wrapper requires Python 3 and `ssh-keygen` (Ubuntu's `openssh-client`).
+The current machine has a 5090 at `0000:01:00.0`, its audio function at
+`0000:01:00.1`, and no unrelated devices in their IOMMU group. AMD integrated
+graphics is available. **The 5090 is currently the firmware's primary boot GPU**
+and hosts GNOME/Xorg, even though you normally access the machine headlessly.
 
-Defaults in `provision/codex-vm/config.sh` are 8 vCPUs, 16384 MiB RAM and a
-100 GiB sparse disk. Override with `CODEX_VM_CPUS`, `CODEX_VM_MEMORY_MIB`, and
-`CODEX_VM_DISK_GIB`. Capacity is checked before creating the disk. All VM data
-is on the system disk under `/var/lib/libvirt/images/codex-vm`; `/mnt/data`
-and physical disks/partitions are not modified. Sparse disks can grow to their
-configured capacity; monitor host free space. A later machine uses these same
-defaults unless you record different defaults in the repository.
+Set **integrated graphics as the primary display in UEFI**, then reboot. Exact
+firmware labels vary by motherboard. Move any host monitor cable to the
+motherboard output if needed. Inspect again; `boot_vga` for the 5090 must be `0`.
+CPU virtualization and IOMMU already work on the inspected machine.
 
-### Host effects
+Then:
 
-- Installs packages from `provision/codex-vm/apt-packages.txt` and their dependencies
-  through Ubuntu APT; refreshes the APT index. Package installation may start
-  libvirt and its default network before the custom network is defined.
-- Uses existing KVM kernel modules. Does not replace the kernel, change UEFI,
-  relax AppArmor, or repartition storage. Package services may load modules.
-- Enables `libvirtd.service` and `codex-vm-firewall.service`, installing the
-  latter and a libvirtd ordering dependency under `/etc/systemd/system`.
-- Installs `/etc/codex-vm/firewall.nft`. It atomically replaces only the
-  `inet codex_vm` table, never the global firewall ruleset. Does not enable or
-  restart the generic `nftables.service` or rewrite `/etc/nftables.conf`.
-- Creates a libvirt NAT network `codex-vm`, bridge `virbr-codex`, subnet
-  `192.168.250.0/24`, and a DHCP/DNS process. Libvirt enables IP forwarding and
-  manages its own NAT/firewall rules. Existing routes overlapping this subnet
-  cause setup to stop. No changes to NetworkManager profiles or physical links.
-- Autostarts the network at boot, after the custom firewall. The VM does not
-  autostart. Keep the firewall service and libvirtd dependency installed while
-  the VM exists. Global firewall flushes or other administrators can remove
-  this boundary; this is not protection against a compromised host.
-- Stores image downloads in `/var/cache/codex-vm`, creation metadata and
-  cloud-init inputs in `/var/lib/codex-vm`, and the disk plus seed ISO in
-  `/var/lib/libvirt/images/codex-vm`. None belongs in Git. Downloads are verified
-  against Canonical's SHA256SUMS fetched over HTTPS. The initial image and Codex
-  installer track current releases, so fresh builds are repeatable procedures,
-  not byte-identical builds. The downloaded image checksums are retained.
-- Does not add your user to `kvm`/`libvirt`, change host sudo rules, or pass host
-  credentials into the VM. VM management uses explicit host `sudo virsh`.
+```sh
+sudo codex-vm prepare-gpu --acknowledge-display-loss
+```
 
-The boundary permits guest IPv4 internet egress, DNS/DHCP to the bridge, and
-responses to host-initiated connections. New guest connections to host services
-are dropped. Forwarded traffic to private, loopback, link-local, Tailscale CGNAT,
-multicast and reserved IPv4 ranges is dropped; guest IPv6 forwarding is dropped.
-Public IP destinations are allowed, including public servers you may own.
-Existing host firewalls may further restrict permitted traffic. DNS queries are
-forwarded by libvirt; the guest cannot directly use arbitrary host services.
+This checks device isolation and unique PCI IDs, writes only
+`/etc/modprobe.d/codex-vm-vfio.conf` and
+`/etc/initramfs-tools/hooks/codex-vm-vfio`, and rebuilds installed initramfs images.
+These arrange early binding of the GPU/audio to `vfio-pci`. It does not unbind
+running drivers or change GRUB. If firmware still selects the 5090 for boot, it
+refuses rather than disabling host framebuffers globally.
 
-The guest account `codex` has passwordless **guest-only sudo** and key-only SSH.
-There are no host filesystem shares, GPU/device passthrough, Docker sockets,
-host SSH agents or VM guest-agent channel. Default guest packages include Git,
-Python/venv, build tools, OpenSSH and Codex CLI. Codex authentication and enabling
-unrestricted execution remain explicit follow-up steps.
+Reboot manually, then run `sudo codex-vm inspect`: both functions must show
+`driver=vfio-pci`. The GPU stays reserved for guests even when none is running;
+host NVIDIA workloads, including host Ollama GPU inference, cannot use it.
 
-## Finish and verify before full access
+## 2. Create and verify a clean guest
 
-Cloud-init continues after the host script exits. On the client, add:
+```sh
+sudo codex-vm create builder
+sudo codex-vm list
+```
+
+Creation downloads Canonical's Ubuntu 24.04 cloud image and verifies its SHA256
+against Canonical's HTTPS checksum listing. It creates an independent guest disk,
+a seed ISO and a persistent libvirt definition, reserves an unused IP/MAC, attaches
+both GPU functions plus the read-only share, and boots the guest. Each guest gets
+fresh cloud-init metadata and network configuration. OVMF boots with Secure Boot
+disabled so the guest's NVIDIA module does not require interactive key enrollment;
+a 64 GiB PCI MMIO window accommodates the 5090's large BAR. Guests do not autostart.
+
+The command prints the guest IP. Add an alias on your **MBP**, using that IP and
+the private key corresponding to the public key already accepted by ai-box:
 
 ```sshconfig
-Host codex-vm
+Host codex-builder
     HostName 192.168.250.2
     User codex
     ProxyJump ai-box
@@ -92,83 +110,110 @@ Host codex-vm
     ForwardAgent no
 ```
 
-Use your actual existing `ai-box` alias and client key path. ProxyJump transports
-SSH without forwarding your agent or copying its private key. No guest SSH port
-is exposed on the physical host interfaces. The jump user's SSH server must
-permit TCP forwarding.
+Your existing `ai-box` alias still reaches host `10.77.77.2`. No agent or private
+key is forwarded. The host SSH service must allow TCP forwarding to the guest.
+The example IP assumes the first available slot; always use the printed address.
 
 ```sh
-ssh codex-vm 'cloud-init status --wait'
-ssh codex-vm 'test -f /var/lib/codex-vm-provisioned && ~/.local/bin/codex --version'
-ssh codex-vm 'hostname; lsblk; findmnt -t virtiofs,9p'
+ssh codex-builder 'cloud-init status --wait'
+ssh codex-builder 'test -f /var/lib/codex-vm-provisioned && ~/.local/bin/codex --version'
+ssh codex-builder 'sudo reboot'
 ```
 
-`findmnt` should find no shared filesystems (exit 1 is expected). Inspect host
-`sudo virsh --connect qemu:///system dumpxml codex-vm` for the intended disk and
-single network, with no filesystem, hostdev, or channel entries. Inspect
-`sudo nft list table inet codex_vm` and ensure the firewall service is enabled.
-From the guest, test a public HTTPS request works and TCP connections to an
-actual listening host/LAN service time out; use bounded connection timeouts.
-Verify both host bridge and physical host IPs, LAN and Tailscale addresses, and
-IPv6. Repeat the boundary checks after a host reboot before unattended use.
-A timeout alone is not proof: confirm the relevant firewall drop counter rises.
-
-If cloud-init failed, inspect `sudo cat /var/log/cloud-init-output.log` inside
-the guest. Resolve the failure there or explicitly plan a rebuild. Rerunning the
-host installer preserves the disk and does not rerun cloud-init or erase data.
-
-Authenticate from an interactive guest session with `~/.local/bin/codex login`.
-Use the supported login flow it offers. See OpenAI's
-[SSH connection instructions](https://learn.chatgpt.com/docs/remote-connections#connect-to-an-ssh-host):
-add/enable `codex-vm` in the desktop app's SSH connections and select
-`/home/codex/workspace`. Confirm `codex` is available in the guest login shell.
-
-Only after checking the boundary, run inside the guest:
+The guest installs a kernel/headers, open NVIDIA driver, Git, Python and build
+tools, plus Codex. Reboot it before testing the GPU, because the installed kernel
+may be newer than the kernel used during first boot. Then check:
 
 ```sh
-codex --sandbox danger-full-access --ask-for-approval never
+ssh codex-builder 'nvidia-smi; findmnt /mnt/data'
+ssh codex-builder 'curl --fail --max-time 15 https://example.com >/dev/null'
+sudo virsh --connect qemu:///system dumpxml builder
+sudo nft list table inet codex_vm
 ```
 
-Do not put these settings in the host's Codex config. Everything readable in the
-guest, including Codex authentication credentials, is available to guest code.
+Run SSH commands on the MBP and the sudo commands on ai-box. Require successful
+`nvidia-smi` showing the 5090, a 9p `ro` mount, and successful public HTTPS.
+Inspect XML for exactly the GPU functions and read-only `/mnt/data` filesystem,
+with no host block disks or guest management/SSH-agent channels. As guest root,
+verify that remounting the share writable is rejected or that the backend still
+rejects a write, then restore the `ro` guest mount. Avoid overwriting real files.
+Test bounded connections to an actual listening host/LAN service: they should
+time out and increase the corresponding firewall drop counter. Check physical
+host IPs and Tailscale too; repeat boundary checks after a host reboot.
 
-## Reruns and changes
+Direct GPU assignment targets near-native performance, not guaranteed zero
+penalty. Benchmark your actual workload against a recorded host baseline;
+also test guest shutdown/start to verify GPU reset/reassignment. These hardware
+and end-to-end checks remain outstanding until provisioning is run.
 
-Rerunning with the same public key and configuration reconciles host packages,
-firewall and services. It preserves an existing VM's disk and power state; it
-does not recreate or resize it. Manifest changes (resources, SSH key or guest
-provisioning) fail before package installation rather than silently changing an
-existing guest. Plan those migrations explicitly. An existing unmanaged domain,
-network or orphan disk is never adopted or overwritten automatically. Failures
-can leave partial setup; review the reported state rather than deleting disks.
+For failures, inspect guest `/var/log/cloud-init-output.log`; use
+`sudo virsh --connect qemu:///system console builder` for boot messages (Ctrl+]
+exits; password login is disabled). Failed creation retains partial state/disks
+for inspection and never silently deletes or adopts them.
 
-## Start, stop, and baseline backup
+## 3. Save a reusable base, then work in disposable clones
 
-On ai-box:
+Do this while `builder` is a clean provisioned guest, **before personal login,
+projects or secrets are added**. A template is not a general secrets scrubber.
 
 ```sh
-sudo virsh --connect qemu:///system start codex-vm
-sudo virsh --connect qemu:///system shutdown codex-vm
-sudo virsh --connect qemu:///system domstate codex-vm
+sudo codex-vm stop builder
+sudo codex-vm list
+# Once builder is shut off:
+sudo codex-vm template builder ubuntu-gpu
+sudo codex-vm create work --base ubuntu-gpu
 ```
 
-For a baseline, finish provisioning and verification, then shut down and wait
-until `domstate` reports `shut off`. Make an offline disk copy (never copy a
-running guest's disk):
+`template` copies the stopped disk to an independent base, clears cloud-init
+instance state, machine ID, SSH host/user keys, Codex auth/config and common logs.
+It never modifies the original guest disk or overwrites an existing base. The
+base is read-only to QEMU; clones store changes in their own QCOW2 overlay.
+Retain the base while clones reference it. There is no automatic base deletion.
 
-```sh
-sudo cp --reflink=auto --sparse=always --preserve=all --no-clobber \
-  /var/lib/libvirt/images/codex-vm/root.qcow2 \
-  /var/lib/libvirt/images/codex-vm/baseline.qcow2
-```
+Use the printed IP for an MBP `codex-work` SSH alias. First-boot cloud-init supplies
+fresh identity, client public keys and guest-only full-access Codex settings;
+installed tools/drivers are reused. Connect the desktop app to that SSH alias,
+select `/home/codex/workspace`, and authenticate Codex inside the guest. The
+workstation's `.codex/config.toml` allows unrestricted commands **in the guest**.
+The host's Codex config is never changed. Guest credentials are readable by guest
+code, so grant only the account/service access you want this environment to have.
 
-This is a disk backup, not a live memory snapshot. It needs additional storage
-and includes any credentials already in the guest. To restore, shut down and
-verify the guest is off, preserve the current disk separately, then copy the
-baseline back with its original ownership/permissions before starting. Restoration
-discards later guest changes; do it only as an explicit separate operation.
+| Action on ai-box | Effect |
+| --- | --- |
+| `sudo codex-vm list` | Show domains, guest IPs and whether GPU assignment is configured |
+| `sudo codex-vm stop work` | Request graceful shutdown; wait for shut-off state |
+| `sudo codex-vm start work` | Resume the same disk; check mount, boundary and exclusive GPU ownership |
+| `sudo codex-vm discard work --yes` | Delete only that stopped managed guest's definition, NVRAM, seed, disk and DHCP reservation |
+| `sudo codex-vm create work --base ubuntu-gpu` | Create a fresh disposable instance; inspect its new address |
 
-Removal is deliberately manual: shut down and undefine the domain, destroy and
-undefine its network, then remove only its dedicated firewall/service/config
-and data after reviewing what to retain. Keep the boundary until the guest is
-gone. Do not purge shared virtualization packages or flush unrelated firewall rules.
+Export results with Git or client-side `scp` before discard. New downloads live
+on the disposable disk; the original `/mnt/data` survives. A replacement can reuse
+an old IP and has a new SSH host key: verify that you recreated it before updating
+the MBP's known-host entry. Only one running guest can own the 5090. Additional
+CPU-only builders are supported with `create NAME --cpu-only`.
+
+## Reruns, storage and recovery
+
+Host reruns reconcile packages/configuration/services without recreating guests.
+Defaults/public-key changes apply to **new** guests; existing guests keep their
+saved configuration. Host GPU hardware changes require explicit review rather
+than updating old driver bindings blindly. Do not run host setup concurrently
+with lifecycle operations; both use the same lock.
+
+- `/etc/codex-vm/`: host configuration and dedicated firewall rules.
+- `/usr/local/lib/codex-vm/`, `/usr/local/sbin/codex-vm`: root-owned helper code.
+- `/var/lib/codex-vm/instances/`: public seed inputs, machine records and definitions.
+- `/var/lib/libvirt/images/codex-vm/`: writable instance disks and immutable bases.
+- `/var/cache/codex-vm/`: checksum-addressed downloaded images.
+
+All are outside Git. Images are sparse but can grow to configured capacity; the
+helper checks headroom and refuses overwrites. APT/image/installer releases can
+change over time, so the recipe is repeatable, not a bit-identical build.
+
+To return the GPU to host use, stop assigned-device guests, run
+`sudo codex-vm unprepare-gpu --acknowledge-display-loss`, then reboot. This removes
+only this setup's VFIO reservation and rebuilds initramfs; it does not change
+UEFI primary display settings. Keep SSH access and use the AMD output for local
+recovery. Nothing automatically reboots, forces off a guest or detaches a live
+host display. Remove network/firewall/services only after all guests are gone;
+never flush unrelated host firewall rules or delete bases still in use.

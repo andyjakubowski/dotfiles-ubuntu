@@ -11,6 +11,7 @@ Personal dotfiles and provisioning scripts for setting up an Ubuntu development 
 - [`uv`](https://docs.astral.sh/uv/) for Python package and environment management
 - Codex CLI through the official standalone installer, plus Bubblewrap sandbox prerequisites
 - Ollama as a local-only service, with models stored on the data SSD at `/mnt/data/ollama/models` (requires `/mnt/data` mounted; models downloaded separately)
+- Optional disposable GPU VM infrastructure and lifecycle tools (explicit opt-in; see guide)
 - Faster GNOME keyboard repeat settings
 - Git LFS filters
 
@@ -43,7 +44,7 @@ Run `./install` again after changing the dotfiles or package list.
   and what is implemented versus planned.
 - [Low-latency SSH over direct Ethernet](docs/direct-ethernet-ssh.md)
 - [Optional isolated Codex VM](docs/codex-vm.md): opt-in KVM/libvirt host setup,
-  VM creation and guest provisioning, including the host effects and verification.
+  GPU reservation, VM templates/clones and guest provisioning, including host effects and verification.
 
 ## Repository layout
 
@@ -57,7 +58,7 @@ Run `./install` again after changing the dotfiles or package list.
 | `setup_zsh.sh` | Sets Zsh as the default shell and prepares the Hugging Face cache |
 | `setup_uv.sh` | Installs `uv` |
 | `setup_codex.sh` | Installs or updates Codex CLI without prompts |
-| `setup_codex_vm.sh` | Optional isolated VM setup; requires `DOTFILES_CODEX_VM=1` and a client SSH public key |
+| `setup_codex_vm.sh` | Optional GPU VM host infrastructure; requires `DOTFILES_CODEX_VM=1`, reuses existing authorized public keys |
 | `setup_ollama.sh` | Installs Ollama if missing and configures its service and model storage |
 | `setup_ubuntu.sh` | Applies GNOME desktop preferences |
 | `cleanup.sh` | Removes a legacy duplicate 1Password source entry |
