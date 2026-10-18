@@ -9,7 +9,8 @@ Personal dotfiles and provisioning scripts for setting up an Ubuntu development 
 - Package repositories for 1Password, Google Chrome, and Visual Studio Code
 - Zsh as the default shell
 - [`uv`](https://docs.astral.sh/uv/) for Python package and environment management
-- Codex CLI through the official standalone installer
+- Codex CLI through the official standalone installer, plus Bubblewrap sandbox prerequisites
+- Ollama as a local-only service, with models stored on the data SSD at `/mnt/data/ollama/models` (requires `/mnt/data` mounted; models downloaded separately)
 - Faster GNOME keyboard repeat settings
 - Git LFS filters
 
@@ -51,6 +52,7 @@ Run `./install` again after changing the dotfiles or package list.
 | `setup_zsh.sh` | Sets Zsh as the default shell and prepares the Hugging Face cache |
 | `setup_uv.sh` | Installs `uv` |
 | `setup_codex.sh` | Installs or updates Codex CLI without prompts |
+| `setup_ollama.sh` | Installs Ollama if missing and configures its service and model storage |
 | `setup_ubuntu.sh` | Applies GNOME desktop preferences |
 | `cleanup.sh` | Removes a legacy duplicate 1Password source entry |
 | `setup_data_disk.sh` | Optional data-disk partitioning and mount helper |

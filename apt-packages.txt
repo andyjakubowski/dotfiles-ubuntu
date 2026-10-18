@@ -14,6 +14,11 @@ tree
 tldr
 openssh-server
 
+# Codex sandbox prerequisites
+bubblewrap
+apparmor-profiles
+apparmor-utils
+
 # Vendor packages
 google-chrome-stable
 code

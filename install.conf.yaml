@@ -35,6 +35,10 @@
       stdin: true
       stdout: true
       stderr: true
+    - command: ./setup_ollama.sh
+      stdin: true
+      stdout: true
+      stderr: true
     - command: ./setup_ubuntu.sh
       stdin: true
       stdout: true
