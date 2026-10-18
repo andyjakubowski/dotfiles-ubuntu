@@ -38,7 +38,12 @@ Run `./install` again after changing the dotfiles or package list.
 
 ## Guides
 
+- [GPU VM: how it works and the intended developer workflow](docs/gpu-vm-explained.md)
+  — hardware, host processes, guest creation, GPU/storage/network boundaries,
+  and what is implemented versus planned.
 - [Low-latency SSH over direct Ethernet](docs/direct-ethernet-ssh.md)
+- [Optional isolated Codex VM](docs/codex-vm.md): opt-in KVM/libvirt host setup,
+  VM creation and guest provisioning, including the host effects and verification.
 
 ## Repository layout
 
@@ -52,6 +57,7 @@ Run `./install` again after changing the dotfiles or package list.
 | `setup_zsh.sh` | Sets Zsh as the default shell and prepares the Hugging Face cache |
 | `setup_uv.sh` | Installs `uv` |
 | `setup_codex.sh` | Installs or updates Codex CLI without prompts |
+| `setup_codex_vm.sh` | Optional isolated VM setup; requires `DOTFILES_CODEX_VM=1` and a client SSH public key |
 | `setup_ollama.sh` | Installs Ollama if missing and configures its service and model storage |
 | `setup_ubuntu.sh` | Applies GNOME desktop preferences |
 | `cleanup.sh` | Removes a legacy duplicate 1Password source entry |

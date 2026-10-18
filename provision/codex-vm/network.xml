@@ -1,0 +1,12 @@
+<network ipv6='no'>
+  <name>codex-vm</name>
+  <forward mode='nat'/>
+  <bridge name='virbr-codex' stp='on' delay='0'/>
+  <domain name='codex-vm.internal' localOnly='yes'/>
+  <dns enable='yes'/>
+  <ip address='192.168.250.1' netmask='255.255.255.0'>
+    <dhcp>
+      <host mac='52:54:00:ca:de:01' name='codex-vm' ip='192.168.250.2'/>
+    </dhcp>
+  </ip>
+</network>

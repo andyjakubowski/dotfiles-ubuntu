@@ -19,6 +19,10 @@
       path: gitconfig
 
 - shell:
+    - command: ./setup_codex_vm.sh
+      stdin: true
+      stdout: true
+      stderr: true
     - command: ./setup_apt.sh
       stdin: true
       stdout: true

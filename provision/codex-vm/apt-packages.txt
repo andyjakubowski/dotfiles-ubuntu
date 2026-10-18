@@ -1,0 +1,11 @@
+qemu-system-x86
+qemu-utils
+libvirt-daemon-system
+libvirt-clients
+virtinst
+cloud-image-utils
+dnsmasq-base
+nftables
+curl
+ca-certificates
+python3

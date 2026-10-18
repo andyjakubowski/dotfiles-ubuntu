@@ -1,0 +1,14 @@
+[Unit]
+Description=Network boundary for the Codex VM
+Before=libvirtd.service
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/nft -f /etc/codex-vm/firewall.nft
+ExecReload=/usr/sbin/nft -f /etc/codex-vm/firewall.nft
+RemainAfterExit=yes
+# No ExecStop: stopping this unit must not remove the guest's boundary.
+
+[Install]
+WantedBy=multi-user.target
