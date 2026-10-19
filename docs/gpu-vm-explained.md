@@ -22,9 +22,9 @@ the original model library stays outside the guest's writable storage.
 
 **Scope:** this document explains the architecture, using an ordinary VM as
 the starting point and GPU assignment, model sharing and disposable storage as
-the intended workstation design. Provisioning code is being developed separately;
-examples here are not evidence that host provisioning or hardware verification
-has run. Consult the implementation guide and current scripts for lifecycle support.
+the implemented workstation design. Host setup, guest provisioning and lifecycle
+commands are implemented, but have not yet been verified with a running GPU guest
+on ai-box. Follow [the operating guide](codex-vm.md) for setup and verification.
 
 ## Read the boundaries first: three independent questions
 
@@ -738,9 +738,10 @@ network stack. Guest sshd starts the guest shell, and that shell starts Codex;
 these are guest processes scheduled by the guest kernel onto QEMU's vCPUs.
 
 Distinct simultaneous guests need distinct IP/MAC identities; replacements can
-reuse a reserved identity after the old guest is removed. The current script
-uses one fixed identity, `codex-vm` at `192.168.250.2`. A future clone command must
-manage identities deliberately, not copy an active VM's identity blindly.
+reuse an address after the old guest is removed. The lifecycle helper allocates
+an unused IP/MAC slot and fresh instance identity for each new guest, including
+clones. Use the address printed by `codex-vm create`; do not assume it is
+`192.168.250.2`.
 
 ## 7. Choose ownership boundaries for the GPU and models
 

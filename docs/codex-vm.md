@@ -11,6 +11,12 @@ It does not create a VM, detach a live GPU, change firmware settings or reboot.
 Ordinary `./install` runs skip this optional setup; setting the same opt-in on
 `./install` includes it in the full dotfiles run.
 
+Use `DOTFILES_CODEX_VM=1 ./install` on a fresh host for normal dotfiles plus VM
+infrastructure, or `DOTFILES_CODEX_VM=1 ./setup_codex_vm.sh` for VM infrastructure
+alone. Neither creates a guest: `sudo codex-vm create NAME` creates, boots and
+automatically provisions one after the prerequisites below are ready. For a
+short checklist, see [todo.md](../todo.md).
+
 The setup installs Ubuntu QEMU/libvirt, OVMF firmware, cloud-image tools,
 libguestfs tools and their dependencies. It installs a root-owned `codex-vm`
 command, saves configuration under `/etc/codex-vm`, and enables libvirt plus a
