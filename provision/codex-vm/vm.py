@@ -24,7 +24,7 @@ import render
 CONFIG = Path('/etc/codex-vm/config.json')
 STATE = Path('/var/lib/codex-vm')
 IMAGES = Path('/var/lib/libvirt/images/codex-vm')
-CACHE = Path('/var/cache/codex-vm')
+CACHE = Path('/var/cache/cloud-images/ubuntu')
 HERE = Path(__file__).resolve().parent
 SYS_PCI = Path('/sys/bus/pci/devices')
 
