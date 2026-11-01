@@ -1,0 +1,30 @@
+name: Offline provisioning checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check shell syntax
+        run: |
+          bash -n install
+          for script in setup_*.sh cleanup.sh provision/apt-repos.d/*.sh provision/codex-vm/*.sh; do
+            bash -n "$script"
+            if [ "$(head -n 1 "$script")" = '#!/bin/sh' ]; then
+              dash -n "$script"
+            fi
+          done
+      - name: Exercise shell provisioning with fake commands
+        run: python3 -m unittest discover -s tests -v
+      - name: Check VM rendering and safety boundaries
+        run: python3 -m unittest discover -s provision/codex-vm -p 'test_*.py' -v
