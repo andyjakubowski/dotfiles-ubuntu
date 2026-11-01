@@ -95,3 +95,10 @@ DEV=/dev/nvme1n1 PART=/dev/nvme1n1p1 MNT=/mnt/data ./setup_data_disk.sh
 ```
 
 Supported overrides are `DEV`, `PART`, `MNT`, `FS`, `OWNER_USER`, and `OWNER_GROUP`.
+
+
+## Offline checks
+
+Run `python3 -m unittest discover -s tests -v` to exercise provisioning with fake commands in temporary directories. These checks do not install software or change workstation settings.
+
+Run `python3 -m unittest discover -s provision/codex-vm -p 'test_*.py' -v` for VM rendering and boundary checks. Real GPU passthrough, guest startup, and network isolation still require the disposable-host verification in the VM guide.
